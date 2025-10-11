@@ -1,0 +1,1 @@
+window.puzzleContent = `<h1>Puzzle</h1><p>Challenge yourself with daily puzzles and improve your skills!</p>`;
