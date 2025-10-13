@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C++ Online Compiler (Resizable 3-Panel Layout)</title>
+
+  <!-- CodeMirror CSS & Theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+  <!-- CodeMirror JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #1e1e1e;
+      color: #eaeaea;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 18px; /* Set base font size to 18px */
+    }
+
+    header {
+      background: #111;
+      color: #00b4ff;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      border-bottom: 1px solid #333;
+    }
+
+    main {
+      display: flex;
+      height: calc(100vh - 45px);
+      overflow: hidden;
+    }
+
+    /* Panels */
+    .panel {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #1f1f1f;
+      border-right: 1px solid #333;
+    }
+
+    #left-panel {
+      background: #181818;
+      min-width: 100px;
+      max-width: 1000px;
+      width: 20%;
+      resize: horizontal;
+    }
+
+    #center-panel {
+      flex: 1;
+      background: #1f1f1f;
+      min-width: 300px;
+      max-width: 3000px;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: horizontal; 
+    }
+
+    #right-panel {
+      background: #151515;
+      width: 30%;
+      min-width: 250px;
+      max-width: 600px;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: horizontal;
+    }
+
+    /* Editor + Button Layout */
+    #editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Force CodeMirror to fill the #editor div */
+    .CodeMirror {
+      height: 100% !important;
+      width: 100% !important;
+      flex: 1;
+      background: #1e1e1e;
+      /* Inherit base 18px font size (explicit here in case of overrides) */
+      font-size: 18px;
+    }
+
+    button {
+      background: #00b4ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 18px; /* Updated to 18px */
+      margin-top: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+      align-self: flex-start;
+    }
+
+    button:hover {
+      background: #0090d1;
+    }
+
+    /* Output Panel */
+    #right-panel h3 {
+      margin-top: 0;
+      color: #00b4ff;
+    }
+
+    #output {
+      flex: 1;
+      background: #0d0d0d;
+      color: #0f0;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      overflow-x: auto;
+      /* Inherit base 18px font size (explicit here in case of overrides) */
+      font-size: 18px;
+    }
+
+    /* Responsive Fallback */
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+      .panel {
+        width: 100% !important;
+        resize: none;
+        border-right: none;
+        border-bottom: 1px solid #333;
+        height: auto;
+      }
+      #editor {
+        height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>CodeBuddy</header>
+
+  <main>
+    <div id="left-panel" class="panel">
+      <!-- Left panel: empty for now -->
+    </div>
+
+    <div id="center-panel" class="panel">
+      <div id="editor-container">
+        <div id="editor"></div>
+        <button onclick="runCode()">▶ Run Code</button>
+      </div>
+    </div>
+
+    <div id="right-panel" class="panel">
+      <h3>🖥 Output</h3>
+      <pre id="output">Output will appear here...</pre>
+    </div>
+  </main>
+
+  <script>
+    // Initialize CodeMirror editor
+    const editor = CodeMirror(document.getElementById("editor"), {
+    value: "#include <iostream>\nusing namespace std;\nint main() {\n    cout << \"Hello from Wandbox!\" << endl;\n    return 0;\n}",
+    mode: "text/x-c++src",
+    theme: "dracula",
+    lineNumbers: true,
+    indentUnit: 4,
+    tabSize: 4,
+    matchBrackets: true
+  });
+
+  // Force refresh after layout load to occupy full height
+  window.addEventListener("load", () => {
+    editor.refresh();
+  });
+
+    async function runCode() {
+      const output = document.getElementById('output');
+      output.textContent = "⏳ Compiling and running...";
+
+      const code = editor.getValue();
+
+      try {
+        const response = await fetch("https://wandbox.org/api/compile.json", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            compiler: "gcc-head",
+            code: code
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.program_output) {
+          output.textContent = "✅ Program Output:\n" + result.program_output;
+        } else if (result.compiler_error) {
+          output.textContent = "❌ Compiler Error:\n" + result.compiler_error;
+        } else {
+          output.textContent = "⚠️ No output received.";
+        }
+
+      } catch (error) {
+        output.textContent = "🚨 Error contacting Wandbox API:\n" + error;
+      }
+    }
+  </script>
+  <script async type='module' src='https://interfaces.zapier.com/assets/web-components/zapier-interfaces/zapier-interfaces.esm.js'></script>
+  <zapier-interfaces-chatbot-embed is-popup='true' chatbot-id='cmgfvb8he0015l844sdsepfbs'></zapier-interfaces-chatbot-embed>
+</body>
+</html>
